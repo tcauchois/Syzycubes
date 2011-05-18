@@ -45,8 +45,8 @@ int main(void)
 {
   //LEDs
   uint16_t hue = 0, brightness = BRI_LIMIT - 1, lastBrightness = brightness;
-  //motion
-  int16_t oldaccel[3], accel[3] = {0};
+  //motion 
+  int16_t oldaccel[3], rawoldaccel[3], accel[3] = {0}, rawaccel[3] = {0};
   int32_t dotp[3];
   double flt_div, flt_acos;
   int8_t int_acos;
@@ -76,7 +76,12 @@ int main(void)
   {
     //Read accelerometer, determine hue
     oldaccel[0] = accel[0]; oldaccel[1] = accel[1]; oldaccel[2] = accel[2];
-    adxl345_getxyz(&accel[0], &accel[1], &accel[2]);
+    rawoldaccel[0] = rawaccel[0]; rawoldaccel[1] = rawaccel[1]; rawoldaccel[2] = rawaccel[2];
+    adxl345_getxyz(&rawaccel[0], &rawaccel[1], &rawaccel[2]);
+    //(lowpass filter the accelerometer data)
+    accel[0] = (rawoldaccel[0] + rawaccel[0]) / 2;
+    accel[1] = (rawoldaccel[1] + rawaccel[1]) / 2;
+    accel[2] = (rawoldaccel[2] + rawaccel[2]) / 2;
     //theta = acos(a.b / |a||b|)
     dotp[0] = accel[0] * oldaccel[0] + accel[1] * oldaccel[1] + accel[2] * oldaccel[2];
     dotp[1] = accel[0] * accel[0] + accel[1] * accel[1] + accel[2] * accel[2];
