@@ -35,7 +35,7 @@ void check_battery();
 #define IDLE_ITERS (180 * ITERS_PER_SECOND)
 #define IDLE_ITERS_ACTIVITY_THRESHOLD (60 * 1)
 #define BRI_MAX 255
-#define BRI_MIN 64
+#define BRI_MIN 32
 #define NUM_SAMPLES 128
 #define HIST_SIZE (ITERS_PER_SECOND * 4)
 
@@ -108,11 +108,13 @@ int main(void)
     histPowerIndex++;
     if(histPowerIndex >= HIST_SIZE) histPowerIndex = 0;
 
-    //scale should vary between 0.5ish and 1.5ish... possibly throw a log in here?
+    //scale should vary between 0.5ish and 1.5ish... clamp to [0,1]
     scale = (float)(currentPower * HIST_SIZE) / avgPower;
     scale -= 0.5;
     if(scale > 1.0) scale = 1.0;
     if(scale < 0.0) scale = 0.0;
+    //perception mapping: y=x^4 to give it a concave shape
+    scale = scale*scale*scale*scale;
     brightness = BRI_MIN + (BRI_MAX-BRI_MIN) * scale;
     if(brightness < lastBrightness)
       brightness = (brightness + lastBrightness) / 2;
