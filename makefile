@@ -21,6 +21,10 @@ LIBS := -lm
 # All Target
 all: $(PROJECT).elf secondary-outputs
 
+# Target to invoke avrdude
+run: $(PROJECT).hex
+	avrdude -pm328p -carduino -P/dev/tty.usbserial-FTFA7ZBP -b57600 -Uflash:w:syzycube.hex:a
+
 # Tool invocations
 $(PROJECT).elf: $(OBJS)
 	@echo 'Building target: $@'

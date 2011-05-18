@@ -21,7 +21,7 @@ void accelinit(void);
 void read_mic(int16_t *buffer, uint8_t count);
 
 uint8_t get_battery_percent();
-void shutdown(bool forever);
+void shutdown(int forever);
 void banner();
 void lowbat();
 void check_battery();
@@ -136,7 +136,7 @@ int main(void)
     if(idleIters >= IDLE_ITERS)
     {
       if(idleItersActivity <= IDLE_ITERS_ACTIVITY_THRESHOLD)
-        shutdown(false);
+        shutdown(0);
       else { idleIters = 0; idleItersActivity = 0; }
     }
     else
@@ -263,7 +263,7 @@ void lowbat()
   send_rgb(100, 0, 0);
   _delay_ms(200);
   send_rgb(0, 0, 0);
-  shutdown(true);
+  shutdown(1);
 }
 
 void banner()
@@ -292,7 +292,7 @@ void check_battery()
   }
 }
 
-void shutdown(bool forever)
+void shutdown(int forever)
 {
   // Turn off the LEDs
   send_rgb(0,0,0);
