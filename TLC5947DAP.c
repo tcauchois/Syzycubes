@@ -46,11 +46,11 @@ void send_rgb(uint16_t red, uint16_t green, uint16_t blue)
 void send_hsb(uint16_t hue, uint16_t sat, uint16_t bri)
 {
   /*-------8-Bit-PWM-|-Light-Emission-normalized------
-  hue: 0 to 764
-  sat: 0 to 128 (0 to 127 with small inaccuracy)
-  bri: 0 to 255
-  http://mbed.org/forum/mbed/topic/1251/?page=1#comment-6216
-  */
+hue: 0 to 764
+sat: 0 to 128 (0 to 127 with small inaccuracy)
+bri: 0 to 255
+http://mbed.org/forum/mbed/topic/1251/?page=1#comment-6216
+   */
   uint16_t red_val, green_val, blue_val;
 
   while (hue > 764) hue -= 765;

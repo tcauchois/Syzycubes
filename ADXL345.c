@@ -1,12 +1,12 @@
 /*
-	ADXL345 Library
+   ADXL345 Library
 
-	This libary contains functions to interact with the ADXL345 Triple Axis Digital Accelerometer from Analog Devices written for the ATmega328p
-	In order to use this libary, define the appropriate pins in the ADXL345.h file
+   This libary contains functions to interact with the ADXL345 Triple Axis Digital Accelerometer from Analog Devices written for the ATmega328p
+   In order to use this libary, define the appropriate pins in the ADXL345.h file
 
-	created 20 Aug 2009
-	by Ryan Owens
-	http://www.sparkfun.com
+   created 20 Aug 2009
+   by Ryan Owens
+   http://www.sparkfun.com
 
  */
 #include <stdlib.h>
@@ -39,13 +39,13 @@ void adxl345_getxyz(int16_t *x, int16_t *y, int16_t *z)
 
 char adxl345_read(char register_address)
 {
-	char read_address=0x80 | register_address;
-	char register_value=0;
+  char read_address=0x80 | register_address;
+  char register_value=0;
 
   //clock high, chip select low, to start
   sbi(ACCEL_SCK_PORT, ACCEL_SCK);
   cbi(ACCEL_CS_PORT, ACCEL_CS);
-	
+
   //write the register address
   for(int bit=7; bit>=0; bit--)
   {
@@ -67,11 +67,11 @@ char adxl345_read(char register_address)
     if(ACCEL_DO_PIN & _BV(ACCEL_DO))  sbi(register_value, bit);
     else                           cbi(register_value, bit);
   }
-	
+
   //chip select high
   sbi(ACCEL_CS_PORT, ACCEL_CS);
-	
-	return register_value;
+
+  return register_value;
 }
 
 void adxl345_write(char register_address, char register_value)
@@ -101,7 +101,7 @@ void adxl345_write(char register_address, char register_value)
     sbi(ACCEL_SCK_PORT, ACCEL_SCK);
     _delay_us(1);
   }
-	
+
   //chip select high
   sbi(ACCEL_CS_PORT, ACCEL_CS);
 }

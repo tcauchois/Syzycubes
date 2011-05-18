@@ -21,7 +21,7 @@ void accelinit(void);
 void read_mic(int16_t *buffer, uint8_t count);
 
 uint8_t get_battery_percent();
-void shutdown();
+void shutdown(bool forever);
 void banner();
 void lowbat();
 void check_battery();
@@ -59,15 +59,15 @@ int main(void)
   //power management
   uint16_t idleIters = 0, batteryCheckIters = 0, idleItersActivity = 0;
 
-	// Initialize io ports
-	ioinit();
+  // Initialize io ports
+  ioinit();
 
-	// Initialize serial
-	serialinit();
-	stdout = &mystdout;
+  // Initialize serial
+  serialinit();
+  stdout = &mystdout;
 
-	// Initialize accelerometer
-	accelinit();
+  // Initialize accelerometer
+  accelinit();
 
   // print banner/battery check
   banner();
@@ -136,7 +136,7 @@ int main(void)
     if(idleIters >= IDLE_ITERS)
     {
       if(idleItersActivity <= IDLE_ITERS_ACTIVITY_THRESHOLD)
-        shutdown();
+        shutdown(false);
       else { idleIters = 0; idleItersActivity = 0; }
     }
     else
@@ -153,52 +153,52 @@ int main(void)
 
 void ioinit(void)
 {
-	// Power latch
-	PORTC |= _BV(PWR_EN_CPU); // PWR_EN_CPU should default to high
-	DDRC |= (_BV(PWR_EN_CPU));
+  // Power latch
+  PORTC |= _BV(PWR_EN_CPU); // PWR_EN_CPU should default to high
+  DDRC |= (_BV(PWR_EN_CPU));
 
-	// Accelerometer
-	DDRC |= (_BV(ACCEL_SCK) | _BV(ACCEL_DI));
-	PORTD |= _BV(ACCEL_CS); // ADXL_CS should default to high
-	DDRD |= (_BV(ACCEL_CS));
+  // Accelerometer
+  DDRC |= (_BV(ACCEL_SCK) | _BV(ACCEL_DI));
+  PORTD |= _BV(ACCEL_CS); // ADXL_CS should default to high
+  DDRD |= (_BV(ACCEL_CS));
 
-	// LEDs
-	DDRB |= (_BV(PWM_XL) | _BV(PWM_SI) | _BV(PWM_CL));
-	PORTD |= _BV(PWM_BL); // LED_BLANK should default to high
-	DDRD |= (_BV(PWM_BL));
+  // LEDs
+  DDRB |= (_BV(PWM_XL) | _BV(PWM_SI) | _BV(PWM_CL));
+  PORTD |= _BV(PWM_BL); // LED_BLANK should default to high
+  DDRD |= (_BV(PWM_BL));
 }
 
 void serialinit(void)
 {
-	// 115.2K, 8N1
-	UBRR0 = 16;
-	UCSR0A = (_BV(U2X0));
-	UCSR0B = (_BV(RXEN0) | _BV(TXEN0));
-	UCSR0C = (_BV(UCSZ01) | _BV(UCSZ00));
+  // 115.2K, 8N1
+  UBRR0 = 16;
+  UCSR0A = (_BV(U2X0));
+  UCSR0B = (_BV(RXEN0) | _BV(TXEN0));
+  UCSR0C = (_BV(UCSZ01) | _BV(UCSZ00));
 }
 
 void accelinit(void)
 {
-	// Interrupts
-	adxl345_write(THRESH_ACT, 10); // Threshold to detect activity
-	adxl345_write(ACT_INACT_CTL, (_BV(4) | _BV(5) | _BV(6) | _BV(7))); // X, Y, Z participate in activity detection, AC coupled
-	adxl345_write(DATA_FORMAT, INT_INVERT); // Needed for power control bootstrapping
-	adxl345_write(INT_MAP, ~(ACTIVITY)); // Only activity interrupt on INT1
-	adxl345_write(INT_ENABLE, ACTIVITY); // Enable the interrupts
+  // Interrupts
+  adxl345_write(THRESH_ACT, 10); // Threshold to detect activity
+  adxl345_write(ACT_INACT_CTL, (_BV(4) | _BV(5) | _BV(6) | _BV(7))); // X, Y, Z participate in activity detection, AC coupled
+  adxl345_write(DATA_FORMAT, INT_INVERT); // Needed for power control bootstrapping
+  adxl345_write(INT_MAP, ~(ACTIVITY)); // Only activity interrupt on INT1
+  adxl345_write(INT_ENABLE, ACTIVITY); // Enable the interrupts
 
-	// Sampling
-	adxl345_write(BW_RATE, RATE_25HZ); // Set sample rate to 25 Hz
-	adxl345_write(POWER_CTL, MEASURE); // Start measuring
+  // Sampling
+  adxl345_write(BW_RATE, RATE_25HZ); // Set sample rate to 25 Hz
+  adxl345_write(POWER_CTL, MEASURE); // Start measuring
 }
 
 int uart_putchar(char c, FILE *stream)
 {
-	if(c == '\n') {
-		uart_putchar('\r', stream);
-	}
-	loop_until_bit_is_set(UCSR0A, UDRE0);
-	UDR0 = c;
-	return 0;
+  if(c == '\n') {
+    uart_putchar('\r', stream);
+  }
+  loop_until_bit_is_set(UCSR0A, UDRE0);
+  UDR0 = c;
+  return 0;
 }
 
 int uart_charwaiting(void)
@@ -226,44 +226,44 @@ void read_mic(int16_t *buffer, uint8_t count)
 
 uint8_t get_battery_percent()
 {
-	ADMUX = BATT_ADC_MUX;
+  ADMUX = BATT_ADC_MUX;
 
   //10x multisample
-	uint16_t val = 0;
-	for(uint8_t i = 0; i < 10; ++i) {
-		ADCSRA = _BV(ADEN)|_BV(ADSC)|_BV(ADIF)|_BV(ADPS2)|_BV(ADPS1);
-		while(bit_is_clear(ADCSRA, ADIF));
-		val += ADC;
-	};
-	ADCSRA = 0;
-	val /= 10;
+  uint16_t val = 0;
+  for(uint8_t i = 0; i < 10; ++i) {
+    ADCSRA = _BV(ADEN)|_BV(ADSC)|_BV(ADIF)|_BV(ADPS2)|_BV(ADPS1);
+    while(bit_is_clear(ADCSRA, ADIF));
+    val += ADC;
+  };
+  ADCSRA = 0;
+  val /= 10;
 
-	// Scale the voltage to percent
-	// 500 => 1.8V
-	// 800 => 3V
-	if(val < 500) { val = 500; }
-	if(val > 800) { val = 800; }
-	val -= 500;
-	val /= 3;
+  // Scale the voltage to percent
+  // 500 => 1.8V
+  // 800 => 3V
+  if(val < 500) { val = 500; }
+  if(val > 800) { val = 800; }
+  val -= 500;
+  val /= 3;
 
-	return val;
+  return val;
 }
 
 //blink LEDs and turn off (in case of low battery)
 void lowbat()
 {
-		send_rgb(100, 0, 0);
-		_delay_ms(200);
-		send_rgb(0, 0, 0);
-		_delay_ms(200);
-		send_rgb(100, 0, 0);
-		_delay_ms(200);
-		send_rgb(0, 0, 0);
-		_delay_ms(200);
-		send_rgb(100, 0, 0);
-		_delay_ms(200);
-		send_rgb(0, 0, 0);
-		shutdown();
+  send_rgb(100, 0, 0);
+  _delay_ms(200);
+  send_rgb(0, 0, 0);
+  _delay_ms(200);
+  send_rgb(100, 0, 0);
+  _delay_ms(200);
+  send_rgb(0, 0, 0);
+  _delay_ms(200);
+  send_rgb(100, 0, 0);
+  _delay_ms(200);
+  send_rgb(0, 0, 0);
+  shutdown(true);
 }
 
 void banner()
@@ -272,15 +272,15 @@ void banner()
   printf("Syzygryd Memorial Cube Firmware.  Hello!\n");
 
   //give the user a visual indication of battery health...
-	uint8_t bat = get_battery_percent();
-	if(bat == 0) {
+  uint8_t bat = get_battery_percent();
+  if(bat == 0) {
     lowbat();
-	} else {
-		// Show the battery level
-		send_rgb(100 - bat, bat, 0);
-		_delay_ms(1000);
-		send_rgb(0, 0, 0);
-	}
+  } else {
+    // Show the battery level
+    send_rgb(100 - bat, bat, 0);
+    _delay_ms(1000);
+    send_rgb(0, 0, 0);
+  }
 }
 
 void check_battery()
@@ -292,20 +292,27 @@ void check_battery()
   }
 }
 
-void shutdown()
+void shutdown(bool forever)
 {
-  //turn off the LEDs
+  // Turn off the LEDs
   send_rgb(0,0,0);
 
   // Reset the ADXL threshold level
-	adxl345_write(THRESH_ACT, 50); // Threshold to detect activity
+  adxl345_write(THRESH_ACT, 50); // Threshold to detect activity
 
-	// Read the ADXL interrupts to clear out PWR_EN_ADXL
-	adxl345_read(INT_SOURCE);
+  // If we don't want to turn back on turn off the accelerometer
+  if(forever)
+    adxl345_write(POWER_CTL, 0);
 
-	// Lower the power latch (PWR_EN_CPU)
-	PORTC &= ~(_BV(PORTC4));
+  // Loop until we die
+  while(1)
+  {
+    // Read the ADXL interrupts to clear out PWR_EN_ADXL
+    adxl345_read(INT_SOURCE);
 
-	// Spin and die
-	while(1);
+    // Lower the power latch (PWR_EN_CPU)
+    PORTC &= ~(_BV(PORTC4));
+
+    _delay_ms(5000);
+  }
 }

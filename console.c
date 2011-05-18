@@ -97,7 +97,7 @@ void dispatch_console(void)
 
 char get_command(char *command, int maxlength)
 {
-	char input=0, length=0;
+  char input=0, length=0;
 
   if(uart_charwaiting() != 0)
     return 1;
