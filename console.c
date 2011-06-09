@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <avr/pgmspace.h>
 
 #include "main.h"
 #include "console.h"
@@ -37,9 +38,9 @@ CommandArray mainMenu[] =
 
 char aboutCmd(char *arg)
 {
-  printf("This awesome piece of awesomeness designed by Ardent Heavy Industries!\n");
-  printf("Hardware by Nathan Hunsperger\n");
-  printf("Software by Tom Cauchois\n");
+  printf_P(PSTR("This awesome piece of awesomeness designed by Ardent Heavy Industries!\n"));
+  printf_P(PSTR("Hardware by Nathan Hunsperger\n"));
+  printf_P(PSTR("Software by Tom Cauchois\n"));
   return 0;
 }
 
@@ -47,9 +48,9 @@ char helpCmd(char *arg)
 {
   int i;
 
-  printf("Commands:\n");
+  printf_P(PSTR("Commands:\n"));
   for(i = 0; mainMenu[i].name != NULL; ++i)
-    printf("  %s\n", mainMenu[i].name);
+    printf_P(PSTR("  %s\n"), mainMenu[i].name);
 
   return 0;
 }
@@ -61,7 +62,7 @@ char ledCmdRgb(char *arg)
   g = strtoul(arg, &arg, 16);
   b = strtoul(arg, &arg, 16);
 
-  printf("Setting LEDs (0x%lx, 0x%lx, 0x%lx)\n", r, g, b);
+  printf_P(PSTR("Setting LEDs (0x%lx, 0x%lx, 0x%lx)\n"), r, g, b);
   send_rgb((uint16_t)r, (uint16_t)g, (uint16_t)b);
   return 0;
 }
@@ -73,7 +74,7 @@ char ledCmdHsb(char *arg)
   s = strtoul(arg, &arg, 16);
   b = strtoul(arg, &arg, 16);
 
-  printf("Setting LEDs HSB (0x%lx, 0x%lx, 0x%lx)\n", h, s, b);
+  printf_P(PSTR("Setting LEDs HSB (0x%lx, 0x%lx, 0x%lx)\n"), h, s, b);
   send_hsb((uint16_t)h, (uint16_t)s, (uint16_t)b);
   return 0;
 }
@@ -82,7 +83,7 @@ char accelCmd(char *arg)
 {
   int16_t x,y,z;
   adxl345_getxyz(&x, &y, &z);
-  printf("Accel: (%d, %d, %d)\n", x, y, z);
+  printf_P(PSTR("Accel: (%d, %d, %d)\n"), x, y, z);
   return 0;
 }
 
@@ -94,7 +95,7 @@ void dispatch_console(void)
 
   if(init == 0)
   {
-    printf("> ");
+    printf_P(PSTR("> "));
     init = 1;
   }
 
@@ -102,7 +103,7 @@ void dispatch_console(void)
   {
     execute_command(command, mainMenu);
     memset(command, 0, sizeof(command));
-    printf("> ");
+    printf_P(PSTR("> "));
   }
 }
 
@@ -117,14 +118,14 @@ char get_command(char *command, int maxlength)
   while(input != '\r' && input != '\n')
   {
     *command = input;
-    printf("%c", *command++);
+    printf_P(PSTR("%c"), *command++);
     if(++length == maxlength - 1)
       break;
     if(uart_charwaiting() != 0)
       return 1;
     input = uart_getchar();
   }
-  printf("\n");
+  printf_P(PSTR("\n"));
 
   return 0;
 }
@@ -146,6 +147,6 @@ char execute_command(char *cmdstr, CommandArray *commands)
     }
   }
 
-  printf("Unknown command! Type 'help' for a list of commands\n");
+  printf_P(PSTR("Unknown command! Type 'help' for a list of commands\n"));
   return 1;
 }

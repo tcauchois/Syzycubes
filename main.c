@@ -276,7 +276,7 @@ void lowbat()
 void banner()
 {
   //console banner
-  printf("Syzygryd Memorial Cube Firmware.  Hello!\n");
+  printf_P(PSTR("Syzygryd Memorial Cube Firmware.  Hello!\n"));
 
   //give the user a visual indication of battery health...
   uint8_t bat = get_battery_percent();
