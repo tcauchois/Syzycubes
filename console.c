@@ -8,6 +8,17 @@
 #include "ADXL345.h"
 #include "TLC5947DAP.h"
 
+#define MAX_COMMAND_LENGTH	32
+
+typedef char (*CommandFunc)(char *);
+
+typedef struct {
+  char *name;
+  CommandFunc func;
+} CommandArray;
+
+char get_command(char *command, int maxlength);
+char execute_command(char *cmdstr, CommandArray *commands);
 char helpCmd(char *);
 char ledCmdRgb(char *);
 char ledCmdHsb(char *);
