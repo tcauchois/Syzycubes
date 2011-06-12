@@ -23,13 +23,13 @@ all: $(PROJECT).elf secondary-outputs
 
 # Target to invoke avrdude
 run: $(PROJECT).hex
-	avrdude -pm328p -carduino -P/dev/tty.usbserial-FTFA7ZBP -b57600 -Uflash:w:syzycube.hex:a
+	avrdude -pm168 -carduino -P/dev/tty.usbserial-FTFA7ZBP -b19200 -Uflash:w:syzycube.hex:a
 
 # Tool invocations
 $(PROJECT).elf: $(OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: AVR C Linker'
-	avr-gcc -Wl,-Map,$(PROJECT).map -mmcu=atmega328p -o"$(PROJECT).elf" $(OBJS) $(LIBS)
+	avr-gcc -Wl,-Map,$(PROJECT).map -mmcu=atmega168p -o"$(PROJECT).elf" $(OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -55,14 +55,14 @@ sizedummy: $(PROJECT).elf
 %.o: %.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: AVR Compiler'
-	avr-gcc -Wall -Os -fpack-struct -fshort-enums -std=c99 -funsigned-char -funsigned-bitfields -mmcu=atmega328p -DF_CPU=16000000UL -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -c -o"$@" "$<"
+	avr-gcc -Wall -Os -fpack-struct -fshort-enums -std=c99 -funsigned-char -funsigned-bitfields -mmcu=atmega168p -DF_CPU=16000000UL -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -c -o"$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
 %.o: %.S
 	@echo 'Building file: $<'
 	@echo 'Invoking: AVR Assembler'
-	avr-gcc -x assembler-with-cpp -mmcu=atmega328p -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -c -o"$@" "$<"
+	avr-gcc -x assembler-with-cpp -mmcu=atmega168p -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -c -o"$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
