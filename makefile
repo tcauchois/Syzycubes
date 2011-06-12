@@ -1,5 +1,8 @@
 # Add inputs and outputs from these tool invocations to the build variables
 PROJECT := syzycube
+
+AVRDUDE_PORT ?= /dev/tty.usbserial-FTFA7ZBP
+
 ###
 LSS := syzycube.lss
 FLASH_IMAGE := syzycube.hex
@@ -23,7 +26,7 @@ all: $(PROJECT).elf secondary-outputs
 
 # Target to invoke avrdude
 run: $(PROJECT).hex
-	avrdude -pm168 -carduino -P/dev/tty.usbserial-FTFA7ZBP -b19200 -Uflash:w:syzycube.hex:a
+	avrdude -pm168 -carduino -P$(AVRDUDE_PORT) -b19200 -Uflash:w:syzycube.hex:a
 
 # Tool invocations
 $(PROJECT).elf: $(OBJS)
