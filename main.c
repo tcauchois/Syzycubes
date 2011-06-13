@@ -29,11 +29,15 @@ void check_battery();
 //FIXME: calibrate DELAY_MS and ITERS_PER_SECOND
 #define DELAY_MS 1
 #define ITERS_PER_SECOND 18
+#define ITERS_PER_MINUTE (ITERS_PER_SECOND * 60)
+
 //check battery every 10 minutes
 #define BATTERY_CHECK_ITERS (600 * ITERS_PER_SECOND)
-//de-activate after a minute sitting idle
-#define IDLE_ITERS (180 * ITERS_PER_SECOND)
-#define IDLE_ITERS_ACTIVITY_THRESHOLD (60 * 1)
+
+// Idle config
+#define IDLE_MINUTES_UNTIL_SHUTDOWN 10
+#define IDLE_ACTIVITY_THRESHOLD 4
+
 #define BRI_MAX 255
 #define BRI_MIN 32
 #define NUM_SAMPLES 128
@@ -57,7 +61,10 @@ int main(void)
   uint32_t currentPower, avgPower = 0;
   double scale;
   //power management
-  uint16_t idleIters = 0, batteryCheckIters = 0, idleItersActivity = 0;
+  uint16_t batteryCheckIters = 0;
+  //idle
+  uint16_t idleIters = 0, idleActivity = 0;
+  uint8_t idleMinutes = 0;
 
   // Initialize io ports
   ioinit();
@@ -97,7 +104,7 @@ int main(void)
     if(int_acos > 15)
     {
       hue += 15;
-      ++idleItersActivity;
+      idleActivity++;
     }
     if(hue >= HUE_LIMIT) hue -= HUE_LIMIT;
 
@@ -140,17 +147,25 @@ int main(void)
     else
       ++batteryCheckIters;
 
-    if(idleIters >= IDLE_ITERS)
-    {
-      if(idleItersActivity <= IDLE_ITERS_ACTIVITY_THRESHOLD)
+    // Idle check
+    idleIters++;
+    if(idleIters >= ITERS_PER_MINUTE) {
+      if(idleActivity >= IDLE_ACTIVITY_THRESHOLD) {
+        // Activity!!!  Reset idle minutes
+        idleMinutes = 0;
+      } else {
+        // Not enough activity, mark minute as idle
+        idleMinutes++;
+      }
+
+      // Shutdown if idle for too long
+      if(idleMinutes >= IDLE_MINUTES_UNTIL_SHUTDOWN) {
         shutdown(0);
-      else { idleIters = 0; idleItersActivity = 0; }
-    }
-    else
-    {
-      ++idleIters;
-      if(adxl345_read(INT_SOURCE) & ACTIVITY)
-        ++idleItersActivity;
+      }
+
+      // Reset iteration counts
+      idleIters = 0;
+      idleActivity = 0;
     }
 
     //Loop delay
