@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 
 #include <math.h>
 
@@ -15,6 +16,7 @@
 #include "console.h"
 
 void ioinit(void);
+void timerinit(void);
 void serialinit(void);
 void accelinit(void);
 
@@ -25,6 +27,7 @@ void shutdown(int forever);
 void banner();
 void lowbat();
 void check_battery();
+uint16_t get_ticks();
 
 //FIXME: calibrate DELAY_MS and ITERS_PER_SECOND
 #define DELAY_MS 1
@@ -37,6 +40,7 @@ void check_battery();
 // Idle config
 #define IDLE_MINUTES_UNTIL_SHUTDOWN 10
 #define IDLE_ACTIVITY_THRESHOLD 4
+#define MINUTES_UNTIL_SHUTDOWN 15
 
 #define BRI_MAX 255
 #define BRI_MIN 32
@@ -44,6 +48,7 @@ void check_battery();
 #define HIST_SIZE (ITERS_PER_SECOND * 4)
 
 static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
+static volatile uint16_t ticks; // updated async
 
 int main(void)
 {
@@ -69,12 +74,18 @@ int main(void)
   // Initialize io ports
   ioinit();
 
+  // Initialize the timer
+  timerinit();
+
   // Initialize serial
   serialinit();
   stdout = &mystdout;
 
   // Initialize accelerometer
   accelinit();
+
+  // Enable interrupts
+  sei();
 
   // print banner/battery check
   banner();
@@ -168,6 +179,11 @@ int main(void)
       idleActivity = 0;
     }
 
+    // Idle backstop check
+    if(get_ticks() >= MINUTES_UNTIL_SHUTDOWN * 60) {
+      shutdown(0);
+    }
+
     //Loop delay
     _delay_ms(DELAY_MS);
   }
@@ -188,6 +204,14 @@ void ioinit(void)
   DDRB |= (_BV(PWM_XL) | _BV(PWM_SI) | _BV(PWM_CL));
   PORTD |= _BV(PWM_BL); // LED_BLANK should default to high
   DDRD |= (_BV(PWM_BL));
+}
+
+void timerinit(void)
+{
+  // Set TIMER1_CAPT interrupt for 1s interval
+  ICR1 = 15625;
+  TIMSK1 |= (_BV(ICIE1));
+  TCCR1B |= (_BV(WGM13) | _BV(WGM12) | _BV(CS12) | _BV(CS10)); // CTC, ICR1, CLK/1024
 }
 
 void serialinit(void)
@@ -337,4 +361,18 @@ void shutdown(int forever)
 
     _delay_ms(5000);
   }
+}
+
+uint16_t get_ticks()
+{
+  uint16_t result;
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    result = ticks;
+  }
+  return ticks;
+}
+
+ISR(TIMER1_CAPT_vect, ISR_BLOCK)
+{
+  ticks++;
 }
