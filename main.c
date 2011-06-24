@@ -17,16 +17,14 @@
 
 void ioinit(void);
 void timerinit(void);
+void audioinit(void);
 void serialinit(void);
 void accelinit(void);
-
-void read_mic(int16_t *buffer, uint8_t count);
 
 uint8_t get_battery_percent();
 void shutdown(int forever);
 void banner();
 void lowbat();
-void check_battery();
 uint16_t get_ticks();
 
 //FIXME: calibrate DELAY_MS and ITERS_PER_SECOND
@@ -49,6 +47,8 @@ uint16_t get_ticks();
 
 static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
 static volatile uint16_t ticks; // updated async
+static volatile uint32_t curAudioPower; // updated async
+static volatile uint8_t curAudioPowerReady; // updated async
 
 int main(void)
 {
@@ -60,8 +60,6 @@ int main(void)
   double flt_div, flt_acos;
   int8_t int_acos;
   //microphone
-  int16_t capture[NUM_SAMPLES];
-  uint8_t i;
   uint32_t histPower[HIST_SIZE] = {0}, histPowerIndex = 0;
   uint32_t currentPower, avgPower = 0;
   double scale;
@@ -74,12 +72,18 @@ int main(void)
   // Initialize io ports
   ioinit();
 
-  // Initialize the timer
-  timerinit();
-
   // Initialize serial
   serialinit();
   stdout = &mystdout;
+
+  // print banner/battery check
+  banner();
+
+  // Initialize the timer
+  timerinit();
+
+  // Initialize audio capture
+  audioinit();
 
   // Initialize accelerometer
   accelinit();
@@ -87,11 +91,15 @@ int main(void)
   // Enable interrupts
   sei();
 
-  // print banner/battery check
-  banner();
-
   while(1)
   {
+    // Wait until audio sample is ready
+    while(!curAudioPowerReady) {}
+    curAudioPowerReady = 0;
+
+    // Grab the current audio power
+    currentPower = curAudioPower;
+
     //Read accelerometer, determine hue
     oldaccel[0] = accel[0]; oldaccel[1] = accel[1]; oldaccel[2] = accel[2];
     rawoldaccel[0] = rawaccel[0]; rawoldaccel[1] = rawaccel[1]; rawoldaccel[2] = rawaccel[2];
@@ -119,12 +127,7 @@ int main(void)
     }
     if(hue >= HUE_LIMIT) hue -= HUE_LIMIT;
 
-    //Read microphone FFT, determine intensity (sliding scale)
-    read_mic(capture, NUM_SAMPLES);
-    currentPower = 0;
-    for(i = 0; i < NUM_SAMPLES; ++i)
-      currentPower += (uint32_t)capture[i] * (uint32_t)capture[i];
-
+    //determine intensity (sliding scale)
     avgPower -= histPower[histPowerIndex];
     histPower[histPowerIndex] = currentPower;
     avgPower += histPower[histPowerIndex];
@@ -148,15 +151,6 @@ int main(void)
 
     //Handle console
     dispatch_console();
-
-    //Power management
-    if(batteryCheckIters >= BATTERY_CHECK_ITERS)
-    {
-      batteryCheckIters = 0;
-      check_battery();
-    }
-    else
-      ++batteryCheckIters;
 
     // Idle check
     idleIters++;
@@ -214,6 +208,13 @@ void timerinit(void)
   TCCR1B |= (_BV(WGM13) | _BV(WGM12) | _BV(CS12) | _BV(CS10)); // CTC, ICR1, CLK/1024
 }
 
+void audioinit(void)
+{
+  // Free running at 19230 samples/s
+  ADMUX = (_BV(ADLAR) | MIC_ADC_MUX);
+  ADCSRA = (_BV(ADEN) | _BV(ADSC) | _BV(ADATE) | _BV(ADIE) | _BV(ADPS2) | _BV(ADPS1));
+}
+
 void serialinit(void)
 {
   // 115.2K, 8N1
@@ -256,18 +257,6 @@ uint8_t uart_getchar(void)
 {
   while( !(UCSR0A & (1<<RXC0)) );
   return UDR0;
-}
-
-//reads samples
-void read_mic(int16_t *buffer, uint8_t count)
-{
-  ADMUX = MIC_ADC_MUX;
-  do {
-    ADCSRA = _BV(ADEN)|_BV(ADSC)|_BV(ADIF)|_BV(ADPS2)|_BV(ADPS1);
-    while(bit_is_clear(ADCSRA, ADIF));
-    *buffer++ = ADC - 512;
-  } while(--count);
-  ADCSRA = 0;
 }
 
 uint8_t get_battery_percent()
@@ -329,15 +318,6 @@ void banner()
   }
 }
 
-void check_battery()
-{
-  //if the battery is too low, shut down
-  uint8_t bat = get_battery_percent();
-  if(bat == 0) {
-    lowbat();
-  }
-}
-
 void shutdown(int forever)
 {
   // Turn off the LEDs
@@ -375,4 +355,21 @@ uint16_t get_ticks()
 ISR(TIMER1_CAPT_vect, ISR_BLOCK)
 {
   ticks++;
+}
+
+ISR(ADC_vect, ISR_BLOCK)
+{
+  static uint16_t count;
+  static uint32_t power;
+
+  count++;
+  if(count == 1000) {
+    curAudioPower = power;
+    curAudioPowerReady = 1;
+    power = 0;
+    count = 0;
+  }
+
+  int8_t sample = ADCH - 128;
+  power += (sample * sample);
 }
