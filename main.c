@@ -27,8 +27,7 @@ void banner();
 void lowbat();
 uint16_t get_ticks();
 
-//FIXME: calibrate DELAY_MS and ITERS_PER_SECOND
-#define DELAY_MS 1
+//FIXME: calibrate ITERS_PER_SECOND
 #define ITERS_PER_SECOND 18
 #define ITERS_PER_MINUTE (ITERS_PER_SECOND * 60)
 
@@ -42,7 +41,6 @@ uint16_t get_ticks();
 
 #define BRI_MAX 255
 #define BRI_MIN 32
-#define NUM_SAMPLES 128
 #define HIST_SIZE (ITERS_PER_SECOND * 4)
 
 static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
@@ -63,8 +61,6 @@ int main(void)
   uint32_t histPower[HIST_SIZE] = {0}, histPowerIndex = 0;
   uint32_t currentPower, avgPower = 0;
   double scale;
-  //power management
-  uint16_t batteryCheckIters = 0;
   //idle
   uint16_t idleIters = 0, idleActivity = 0;
   uint8_t idleMinutes = 0;
@@ -177,9 +173,6 @@ int main(void)
     if(get_ticks() >= MINUTES_UNTIL_SHUTDOWN * 60) {
       shutdown(0);
     }
-
-    //Loop delay
-    _delay_ms(DELAY_MS);
   }
 }
 
@@ -363,7 +356,7 @@ ISR(ADC_vect, ISR_BLOCK)
   static uint32_t power;
 
   count++;
-  if(count == 1000) {
+  if(count == 19230 / ITERS_PER_SECOND) {
     curAudioPower = power;
     curAudioPowerReady = 1;
     power = 0;
