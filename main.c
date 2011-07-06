@@ -27,8 +27,7 @@ void banner();
 void lowbat();
 uint16_t get_ticks();
 
-//FIXME: calibrate ITERS_PER_SECOND
-#define ITERS_PER_SECOND 18
+#define ITERS_PER_SECOND 20
 #define ITERS_PER_MINUTE (ITERS_PER_SECOND * 60)
 
 //check battery every 10 minutes
